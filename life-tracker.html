@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life Tracker">
+<meta name="theme-color" content="#0D0F14">
+<title>Life Tracker</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:#0D0F14;color:#E8EAF0;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;min-height:100vh;overscroll-behavior:none}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+  button{font-family:inherit;cursor:pointer}
+  textarea,input{font-family:inherit}
+  textarea:focus,input:focus{outline:none}
+  ::-webkit-scrollbar{display:none}
+
+  /* Header */
+  .header{padding:env(safe-area-inset-top,24px) 20px 16px;padding-top:max(24px,env(safe-area-inset-top));border-bottom:1px solid #252A38;display:flex;align-items:center;justify-content:space-between}
+  .header-left .date{font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:2px}
+  .header-left .title{font-size:22px;font-weight:800;color:#E8EAF0;margin-top:2px}
+  .header-right .score{font-size:44px;font-weight:900;line-height:1;background:linear-gradient(135deg,#4ADEAA,#38BDF8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header-right .score-label{font-size:11px;color:#6B7280;text-align:right}
+
+  /* Nav */
+  .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#13161E;border-top:1px solid #252A38;display:flex;padding:10px 0;padding-bottom:max(10px,env(safe-area-inset-bottom));z-index:100}
+  .nav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:#6B7280;font-size:10px;font-weight:400;transition:color 0.2s;padding:4px 0}
+  .nav-btn.active{color:#4ADEAA;font-weight:700}
+  .nav-btn .icon{font-size:20px}
+
+  /* Pages */
+  .page{padding:20px 16px;display:flex;flex-direction:column;gap:16px}
+  .page-hidden{display:none}
+
+  /* Cards */
+  .card{background:#1A1E2A;border-radius:16px;border:1px solid #252A38}
+  .card-pad{padding:16px 20px}
+
+  /* Pillar card */
+  .pillar-header{padding:16px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none}
+  .pillar-body{padding:0 20px 20px;display:flex;flex-direction:column;gap:14px}
+  .pillar-divider{height:1px;background:#252A38}
+  .pillar-label{font-weight:700;font-size:16px}
+  .pillar-pct{font-weight:800;font-size:20px}
+  .pillar-desc{font-size:12px;color:#6B7280;margin-top:2px}
+  .pillar-track{font-size:11px;color:#6B7280;margin-top:4px}
+  .chevron{color:#6B7280;font-size:18px;transition:transform 0.2s;margin-left:auto}
+  .chevron.open{transform:rotate(180deg)}
+
+  /* Goal row */
+  .goal-name{font-size:13px;color:#E8EAF0}
+  .goal-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-left:6px;display:inline-block}
+  .goal-stat{font-size:12px;font-weight:600;white-space:nowrap}
+  .goal-bar-track{flex:1;background:#252A38;border-radius:4px;height:6px}
+  .goal-bar-fill{height:100%;border-radius:4px;transition:width 0.4s ease}
+  .btn-minus{background:#3D4356;border:none;border-radius:6px;color:#E8EAF0;width:28px;height:28px;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .btn-plus{border:none;border-radius:6px;color:#000;width:28px;height:28px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .btn-x{background:none;border:none;color:#3D4356;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0}
+
+  /* Confirm delete */
+  .confirm-row{display:flex;gap:4px;flex-shrink:0}
+  .btn-confirm-del{background:#EF444422;border:1px solid #EF4444;border-radius:6px;color:#EF4444;font-size:11px;padding:2px 8px}
+  .btn-cancel-del{background:#3D4356;border:none;border-radius:6px;color:#6B7280;font-size:11px;padding:2px 8px}
+
+  /* Add goal */
+  .btn-add-goal{background:transparent;border:1px dashed;border-radius:10px;padding:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+  .add-goal-form{background:#13161E;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .add-goal-title{font-size:12px;font-weight:600}
+  .cadence-row{display:flex;gap:6px}
+  .cadence-btn{flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:600;transition:all 0.15s;border:1px solid #252A38;background:#1A1E2A;color:#6B7280}
+  .form-input{background:#1A1E2A;border:1px solid #252A38;border-radius:8px;color:#E8EAF0;font-size:13px;padding:9px 12px;width:100%}
+  .form-row{display:flex;gap:8px}
+  .form-col{display:flex;flex-direction:column;gap:4px}
+  .form-label{font-size:11px;color:#6B7280}
+  .btn-save{border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;padding:9px;flex:1}
+  .btn-cancel{background:#3D4356;border:none;border-radius:8px;color:#6B7280;font-size:13px;padding:9px 14px}
+
+  /* Notes */
+  .notes-label{font-size:12px;color:#6B7280;margin-bottom:6px}
+  .notes-area{width:100%;background:#13161E;border:1px solid #252A38;border-radius:10px;color:#E8EAF0;font-size:13px;padding:10px 12px;resize:vertical;line-height:1.5;min-height:70px}
+
+  /* Overview card */
+  .overview-card{background:#1A1E2A;border-radius:16px;border:1px solid #252A38;padding:20px}
+  .overview-title{font-size:13px;font-weight:600;color:#6B7280;margin-bottom:12px}
+  .legend{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px}
+  .legend-dot{width:8px;height:8px;border-radius:50%}
+
+  /* History bars */
+  .week-bars{display:flex;gap:4px;align-items:flex-end;height:48px}
+  .week-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .week-bar-fill{width:100%;border-radius:3px;transition:height 0.4s ease}
+  .week-bar-label{font-size:9px;color:#6B7280}
+
+  /* Section title */
+  .section-title{font-size:18px;font-weight:700;color:#E8EAF0}
+
+  /* History pillar row */
+  .hist-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .hist-pct{margin-left:auto;font-weight:800}
+
+  /* Note card */
+  .note-card{border-radius:12px;padding:14px}
+  .note-pillar{font-size:12px;font-weight:600;margin-bottom:6px}
+  .note-text{font-size:13px;color:#6B7280;line-height:1.6}
+
+  /* Empty state */
+  .empty{font-size:13px;color:#6B7280;text-align:center;padding:8px 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="date" id="hdr-date"></div>
+      <div class="title">Your Life Score</div>
+    </div>
+    <div class="header-right">
+      <div class="score" id="hdr-score">0</div>
+      <div class="score-label">/ 100</div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="page" id="page-dashboard">
+    <div class="overview-card">
+      <div class="overview-title">Balance Overview</div>
+      <div style="display:flex;justify-content:center">
+        <svg id="radar-svg" width="240" height="240"></svg>
+      </div>
+      <div class="legend" id="radar-legend"></div>
+    </div>
+    <div id="pillar-list"></div>
+  </div>
+
+  <!-- History -->
+  <div class="page page-hidden" id="page-history">
+    <div class="section-title">7-Day History</div>
+    <div id="history-list"></div>
+    <div class="section-title" style="margin-top:8px">Today's Notes</div>
+    <div id="notes-list"></div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" data-page="dashboard" onclick="switchPage('dashboard')">
+      <span class="icon">⊞</span>Home
+    </button>
+    <button class="nav-btn" data-page="history" onclick="switchPage('history')">
+      <span class="icon">📊</span>Log
+    </button>
+  </nav>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const COLORS = {
+  bg:'#0D0F14',surface:'#13161E',card:'#1A1E2A',border:'#252A38',
+  physical:'#4ADEAA',mental:'#818CF8',spiritual:'#FB923C',
+  social:'#38BDF8',dietary:'#F472B6',financial:'#FBBF24',
+  text:'#E8EAF0',muted:'#6B7280',dim:'#3D4356'
+};
+
+const PILLARS = [
+  {key:'physical', label:'Physical', emoji:'💪', color:COLORS.physical, desc:'Movement, sleep, energy'},
+  {key:'mental',   label:'Mental',   emoji:'🧠', color:COLORS.mental,   desc:'Focus, learning, mindset'},
+  {key:'spiritual',label:'Spiritual',emoji:'✨', color:COLORS.spiritual,desc:'Purpose, gratitude, stillness'},
+  {key:'social',   label:'Social',   emoji:'🤝', color:COLORS.social,   desc:'Connection, community, love'},
+  {key:'dietary',  label:'Dietary',  emoji:'🥗', color:COLORS.dietary,  desc:'Nutrition, hydration, nourishment'},
+  {key:'financial',label:'Financial',emoji:'💰', color:COLORS.financial,desc:'Savings, spending, growth'},
+];
+
+const CADENCE = {
+  daily:  {label:'Daily',   icon:'📅', defaultTarget:1, defaultUnit:'times'},
+  weekly: {label:'Weekly',  icon:'📆', defaultTarget:3, defaultUnit:'days'},
+  monthly:{label:'Monthly', icon:'🗓️', defaultTarget:1, defaultUnit:'times'},
+};
+
+// ── Storage ────────────────────────────────────────────────────────────────
+const save = (k,v) => { try{localStorage.setItem(k,JSON.stringify(v))}catch{} };
+const load = (k,d) => { try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d} };
+
+// ── State ──────────────────────────────────────────────────────────────────
+let goals    = load('lt_goals',    {physical:[],mental:[],spiritual:[],social:[],dietary:[],financial:[]});
+let progress = load('lt_progress', {});  // {pillarKey: {periodKey: {goalIdx: value}}}
+let notes    = load('lt_notes',    {});  // {pillarKey: {dateKey: string}}
+let expanded = {};  // {pillarKey: bool}
+let confirmingDelete = {}; // {pillarKey_goalId: bool}
+let addingGoal = {}; // {pillarKey: bool}
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+const periodKey = (cadence) => {
+  const now = new Date();
+  if (cadence === 'daily') return now.toISOString().slice(0,10);
+  if (cadence === 'monthly') return now.toISOString().slice(0,7);
+  // weekly — Monday of this week
+  const d = new Date(now);
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() - day + 1);
+  return 'W' + d.toISOString().slice(0,10);
+};
+
+// ── Score calculations ─────────────────────────────────────────────────────
+const getPillarScore = (key) => {
+  const gs = goals[key] || [];
+  if (!gs.length) return 0;
+  const total = gs.reduce((s,g,i) => {
+    const pk = periodKey(g.cadence || 'daily');
+    const val = progress[key]?.[pk]?.[i] ?? 0;
+    return s + Math.min(val / g.target, 1);
+  }, 0);
+  return Math.round((total / gs.length) * 100);
+};
+
+const getOverallScore = () => {
+  const sum = PILLARS.reduce((s,p) => s + getPillarScore(p.key), 0);
+  return Math.round(sum / PILLARS.length);
+};
+
+const getGoalProgress = (pillarKey, goalIdx) => {
+  const g = goals[pillarKey]?.[goalIdx];
+  if (!g) return 0;
+  const pk = periodKey(g.cadence || 'daily');
+  return progress[pillarKey]?.[pk]?.[goalIdx] ?? 0;
+};
+
+const setGoalProgress = (pillarKey, goalIdx, val) => {
+  const g = goals[pillarKey]?.[goalIdx];
+  if (!g) return;
+  const pk = periodKey(g.cadence || 'daily');
+  if (!progress[pillarKey]) progress[pillarKey] = {};
+  if (!progress[pillarKey][pk]) progress[pillarKey][pk] = {};
+  progress[pillarKey][pk][goalIdx] = Math.max(0, Math.min(val, g.target + 2));
+  save('lt_progress', progress);
+};
+
+// ── Header ─────────────────────────────────────────────────────────────────
+const updateHeader = () => {
+  document.getElementById('hdr-date').textContent =
+    new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('hdr-score').textContent = getOverallScore();
+};
+
+// ── Radar chart ────────────────────────────────────────────────────────────
+const drawRadar = () => {
+  const svg = document.getElementById('radar-svg');
+  const size = 240, cx = 120, cy = 120, r = 85;
+  const n = PILLARS.length;
+  let html = '';
+
+  // grid rings
+  [0.25,0.5,0.75,1].forEach(f => {
+    const pts = PILLARS.map((_,i) => {
+      const a = (i/n)*2*Math.PI - Math.PI/2;
+      return `${cx+r*f*Math.cos(a)},${cy+r*f*Math.sin(a)}`;
+    }).join(' ');
+    html += `<polygon points="${pts}" fill="none" stroke="#252A38" stroke-width="0.5"/>`;
+  });
+
+  // axes
+  PILLARS.forEach((_,i) => {
+    const a = (i/n)*2*Math.PI - Math.PI/2;
+    html += `<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="#252A38" stroke-width="0.5"/>`;
+  });
+
+  // data polygon
+  const scores = PILLARS.map(p => getPillarScore(p.key)/100);
+  const dataPts = PILLARS.map((p,i) => {
+    const a = (i/n)*2*Math.PI - Math.PI/2;
+    return `${cx+r*scores[i]*Math.cos(a)},${cy+r*scores[i]*Math.sin(a)}`;
+  }).join(' ');
+  html += `<polygon points="${dataPts}" fill="rgba(130,200,255,0.08)" stroke="rgba(130,200,255,0.5)" stroke-width="1.5"/>`;
+
+  // dots + labels
+  PILLARS.forEach((p,i) => {
+    const a = (i/n)*2*Math.PI - Math.PI/2;
+    const dx = cx+r*scores[i]*Math.cos(a), dy = cy+r*scores[i]*Math.sin(a);
+    const lx = cx+(r+22)*Math.cos(a), ly = cy+(r+22)*Math.sin(a);
+    html += `<circle cx="${dx}" cy="${dy}" r="4" fill="${p.color}"/>`;
+    html += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="${p.color}">${p.emoji}</text>`;
+  });
+
+  svg.innerHTML = html;
+
+  // legend
+  const leg = document.getElementById('radar-legend');
+  leg.innerHTML = PILLARS.map(p =>
+    `<div class="legend-item">
+      <div class="legend-dot" style="background:${p.color}"></div>
+      <span style="color:#6B7280">${p.label}</span>
+      <span style="color:${p.color};font-weight:700">${getPillarScore(p.key)}%</span>
+    </div>`
+  ).join('');
+};
+
+// ── Radial SVG ─────────────────────────────────────────────────────────────
+const radialSVG = (pct, color, emoji, size=64, stroke=5) => {
+  const r = (size - stroke*2)/2;
+  const circ = 2*Math.PI*r;
+  const offset = circ - (pct/100)*circ;
+  return `<svg width="${size}" height="${size}" style="transform:rotate(-90deg);flex-shrink:0">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#252A38" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+      stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+    <text x="${size/2}" y="${size/2}" text-anchor="middle" dominant-baseline="central"
+      font-size="18" style="transform:rotate(90deg);transform-origin:${size/2}px ${size/2}px">${emoji}</text>
+  </svg>`;
+};
+
+// ── Pillar list ────────────────────────────────────────────────────────────
+const renderPillars = () => {
+  const container = document.getElementById('pillar-list');
+  container.innerHTML = PILLARS.map(p => renderPillarCard(p)).join('');
+};
+
+const renderPillarCard = (p) => {
+  const gs = goals[p.key] || [];
+  const isOpen = !!expanded[p.key];
+  const score = getPillarScore(p.key);
+  const done = gs.filter((g,i) => getGoalProgress(p.key,i) >= g.target).length;
+
+  let body = '';
+  if (isOpen) {
+    body += `<div class="pillar-body" id="body-${p.key}">
+      <div class="pillar-divider"></div>`;
+
+    if (gs.length === 0) {
+      body += `<div class="empty">No goals yet — add one below.</div>`;
+    }
+
+    gs.forEach((g,i) => {
+      const val = getGoalProgress(p.key, i);
+      const barPct = Math.min((val/g.target)*100, 100);
+      const cadence = g.cadence || 'daily';
+      const delKey = `${p.key}_${g.id}`;
+      const confirming = !!confirmingDelete[delKey];
+
+      body += `<div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <span class="goal-name">${escHtml(g.text)}</span>
+            <span class="goal-badge" style="background:${p.color}18;color:${p.color}">${CADENCE[cadence].icon} ${CADENCE[cadence].label}</span>
+          </div>
+          <span class="goal-stat" style="color:${barPct>=100?p.color:'#6B7280'}">${val}/${g.target} ${escHtml(g.unit)}</span>
+          ${confirming
+            ? `<div class="confirm-row">
+                <button class="btn-confirm-del" onclick="doDeleteGoal('${p.key}',${g.id})">Delete</button>
+                <button class="btn-cancel-del" onclick="cancelDelete('${p.key}',${g.id})">Cancel</button>
+               </div>`
+            : `<button class="btn-x" onclick="askDeleteGoal('${p.key}',${g.id})">✕</button>`
+          }
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="goal-bar-track">
+            <div class="goal-bar-fill" style="width:${barPct}%;background:${barPct>=100?p.color:p.color+'88'}"></div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn-minus" onclick="changeProgress('${p.key}',${i},${val-1})">−</button>
+            <button class="btn-plus" style="background:${p.color}" onclick="changeProgress('${p.key}',${i},${val+1})">+</button>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Add goal form or button
+    if (addingGoal[p.key]) {
+      body += renderAddGoalForm(p);
+    } else {
+      body += `<button class="btn-add-goal" style="color:${p.color};border-color:${p.color}55;background:${p.color}11"
+        onclick="startAddGoal('${p.key}')">+ Add Goal</button>`;
+    }
+
+    // Notes
+    const todayNote = notes[p.key]?.[todayKey()] || '';
+    body += `<div>
+      <div class="notes-label">📝 Notes & Reflections</div>
+      <textarea class="notes-area" rows="3" placeholder="How is your ${p.label.toLowerCase()} life going today?"
+        oninput="saveNote('${p.key}',this.value)">${escHtml(todayNote)}</textarea>
+    </div>`;
+
+    body += `</div>`;
+  }
+
+  return `<div class="card" style="border-color:${isOpen?p.color+'44':'#252A38'};margin-bottom:12px;overflow:hidden">
+    <div class="pillar-header" onclick="togglePillar('${p.key}')">
+      ${radialSVG(score, p.color, p.emoji)}
+      <div style="flex:1">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span class="pillar-label" style="color:${p.color}">${p.label}</span>
+          <span class="pillar-pct" style="color:${p.color}">${score}%</span>
+        </div>
+        <div class="pillar-desc">${p.desc}</div>
+        <div class="pillar-track">${done}/${gs.length} goals on track</div>
+      </div>
+      <span class="chevron ${isOpen?'open':''}">⌄</span>
+    </div>
+    ${body}
+  </div>`;
+};
+
+const renderAddGoalForm = (p) => {
+  const formId = `form-${p.key}`;
+  return `<div class="add-goal-form" style="border:1px solid ${p.color}33" id="${formId}">
+    <div class="add-goal-title" style="color:${p.color}">New Goal</div>
+    <div>
+      <div class="form-label" style="margin-bottom:6px">Frequency</div>
+      <div class="cadence-row" id="cadence-row-${p.key}">
+        ${Object.entries(CADENCE).map(([k,c]) =>
+          `<button class="cadence-btn" id="cadence-${p.key}-${k}"
+            onclick="selectCadence('${p.key}','${k}')"
+            style="${k==='daily'?`border-color:${p.color};background:${p.color}22;color:${p.color}`:''}">
+            ${c.icon} ${c.label}
+          </button>`
+        ).join('')}
+      </div>
+    </div>
+    <input class="form-input" type="text" id="new-text-${p.key}" placeholder="What do you want to achieve?"
+      onkeydown="if(event.key==='Enter')saveNewGoal('${p.key}')">
+    <div class="form-row">
+      <div class="form-col" style="flex:1">
+        <div class="form-label">Target</div>
+        <input class="form-input" type="number" min="1" max="365" id="new-target-${p.key}" value="1">
+      </div>
+      <div class="form-col" style="flex:2">
+        <div class="form-label">Unit</div>
+        <input class="form-input" type="text" id="new-unit-${p.key}" value="times" placeholder="times, dollars, pages…">
+      </div>
+    </div>
+    <input type="hidden" id="new-cadence-${p.key}" value="daily">
+    <div style="display:flex;gap:8px">
+      <button class="btn-save" style="background:${p.color}" onclick="saveNewGoal('${p.key}')">Save Goal</button>
+      <button class="btn-cancel" onclick="cancelAddGoal('${p.key}')">Cancel</button>
+    </div>
+  </div>`;
+};
+
+// ── Pillar interactions ─────────────────────────────────────────────────────
+const togglePillar = (key) => {
+  expanded[key] = !expanded[key];
+  renderAll();
+};
+
+const changeProgress = (pillarKey, goalIdx, val) => {
+  setGoalProgress(pillarKey, goalIdx, val);
+  renderAll();
+};
+
+const askDeleteGoal = (pillarKey, goalId) => {
+  confirmingDelete[`${pillarKey}_${goalId}`] = true;
+  renderPillarOnly(pillarKey);
+};
+const cancelDelete = (pillarKey, goalId) => {
+  delete confirmingDelete[`${pillarKey}_${goalId}`];
+  renderPillarOnly(pillarKey);
+};
+const doDeleteGoal = (pillarKey, goalId) => {
+  goals[pillarKey] = goals[pillarKey].filter(g => g.id !== goalId);
+  save('lt_goals', goals);
+  delete confirmingDelete[`${pillarKey}_${goalId}`];
+  renderAll();
+};
+
+const startAddGoal = (key) => { addingGoal[key] = true; renderPillarOnly(key); setTimeout(()=>document.getElementById(`new-text-${key}`)?.focus(),50); };
+const cancelAddGoal = (key) => { delete addingGoal[key]; renderPillarOnly(key); };
+
+const selectCadence = (pillarKey, cadence) => {
+  document.getElementById(`new-cadence-${pillarKey}`).value = cadence;
+  const p = PILLARS.find(p=>p.key===pillarKey);
+  Object.keys(CADENCE).forEach(k => {
+    const btn = document.getElementById(`cadence-${pillarKey}-${k}`);
+    if (!btn) return;
+    if (k === cadence) {
+      btn.style.borderColor = p.color;
+      btn.style.background = p.color+'22';
+      btn.style.color = p.color;
+    } else {
+      btn.style.borderColor = '#252A38';
+      btn.style.background = '#1A1E2A';
+      btn.style.color = '#6B7280';
+    }
+  });
+  const c = CADENCE[cadence];
+  document.getElementById(`new-target-${pillarKey}`).value = c.defaultTarget;
+  document.getElementById(`new-unit-${pillarKey}`).value = c.defaultUnit;
+};
+
+const saveNewGoal = (pillarKey) => {
+  const text = document.getElementById(`new-text-${pillarKey}`)?.value?.trim();
+  if (!text) return;
+  const target = parseInt(document.getElementById(`new-target-${pillarKey}`)?.value) || 1;
+  const unit   = document.getElementById(`new-unit-${pillarKey}`)?.value?.trim() || 'times';
+  const cadence= document.getElementById(`new-cadence-${pillarKey}`)?.value || 'daily';
+  goals[pillarKey].push({ id: Date.now(), text, target, unit, cadence });
+  save('lt_goals', goals);
+  delete addingGoal[pillarKey];
+  renderAll();
+};
+
+const saveNote = (pillarKey, val) => {
+  if (!notes[pillarKey]) notes[pillarKey] = {};
+  notes[pillarKey][todayKey()] = val;
+  save('lt_notes', notes);
+  // Don't re-render — just let the textarea be
+};
+
+// ── History page ───────────────────────────────────────────────────────────
+const renderHistory = () => {
+  const today = new Date();
+  const histList = document.getElementById('history-list');
+  const notesList = document.getElementById('notes-list');
+
+  histList.innerHTML = PILLARS.map(p => {
+    const score = getPillarScore(p.key);
+    const bars = Array.from({length:7},(_,i)=>{
+      const d = new Date(today); d.setDate(today.getDate()-(6-i));
+      const k = d.toISOString().slice(0,10);
+      const gs = goals[p.key] || [];
+      if (!gs.length) return {day:['M','T','W','T','F','S','S'][i],pct:0};
+      // For history, use daily keys only for display
+      const pct = Math.round(gs.reduce((s,g,gi)=>{
+        const val = progress[p.key]?.[k]?.[gi] ?? 0;
+        return s + Math.min(val/g.target,1);
+      },0)/gs.length*100);
+      return {day:['M','T','W','T','F','S','S'][i],pct};
+    });
+    return `<div class="card card-pad" style="margin-bottom:12px">
+      <div class="hist-header">
+        <span>${p.emoji}</span>
+        <span style="font-size:14px;font-weight:600;color:#E8EAF0">${p.label}</span>
+        <span class="hist-pct" style="color:${p.color}">${score}%</span>
+      </div>
+      <div class="week-bars">
+        ${bars.map(b=>`<div class="week-bar-col">
+          <div class="week-bar-fill" style="height:${Math.max(4,(b.pct/100)*36)}px;background:${b.pct>0?p.color:'#3D4356'}"></div>
+          <div class="week-bar-label">${b.day}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const todayStr = todayKey();
+  const noteCards = PILLARS.map(p => {
+    const note = notes[p.key]?.[todayStr];
+    if (!note) return '';
+    return `<div class="note-card" style="background:#1A1E2A;border:1px solid ${p.color}33;margin-bottom:8px">
+      <div class="note-pillar" style="color:${p.color}">${p.emoji} ${p.label} · Today</div>
+      <div class="note-text">${escHtml(note)}</div>
+    </div>`;
+  }).join('');
+  notesList.innerHTML = noteCards || `<div class="empty">No notes yet today.</div>`;
+};
+
+// ── Render helpers ─────────────────────────────────────────────────────────
+const renderPillarOnly = (key) => {
+  // Re-render just one pillar card in place
+  const p = PILLARS.find(p=>p.key===key);
+  const cards = document.querySelectorAll('#pillar-list > div');
+  const idx = PILLARS.indexOf(p);
+  if (cards[idx]) cards[idx].outerHTML = renderPillarCard(p);
+  renderPillars(); // simpler to just re-render list
+  drawRadar();
+  updateHeader();
+};
+
+const renderAll = () => {
+  drawRadar();
+  renderPillars();
+  updateHeader();
+  if (currentPage === 'history') renderHistory();
+};
+
+// ── Page switching ─────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+const switchPage = (page) => {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(el => el.classList.add('page-hidden'));
+  document.getElementById(`page-${page}`).classList.remove('page-hidden');
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === page);
+  });
+  if (page === 'history') renderHistory();
+};
+
+// ── Utility ────────────────────────────────────────────────────────────────
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ── Init ───────────────────────────────────────────────────────────────────
+updateHeader();
+renderAll();
+</script>
+</body>
+</html>
